@@ -10,11 +10,13 @@ class MyRestfullAPI(EasyRestBase):
     select_objs = GET('objects/filter')
     objs_by_type = GET('objects/{type}')
 
-conn = MyRestfullAPI("http://some.api.com/my_api/v2.0")
 
-print conn.list_objs()
+def example_func():
+    conn = MyRestfullAPI("http://some.api.com/my_api/v2.0")
 
-obj_id = conn.create_obj()['id']
-conn.select_objs(color='read')
-conn.del_obj(obj_id)
-conn.objs_by_type(type='red')
+    print conn.list_objs()
+
+    obj_id = conn.create_obj()['id']
+    conn.select_objs(color='read')
+    conn.del_obj(obj_id)
+    conn.objs_by_type(type='red')
