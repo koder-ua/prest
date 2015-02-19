@@ -1,8 +1,8 @@
-from easy_rest import EasyRestBase
-from easy_rest import GET, POST, DELETE
+from prest import PRestBase
+from prest import GET, POST, DELETE
 
 
-class MyRestfullAPI(EasyRestBase):
+class MyRestfullAPI(PRestBase):
     list_objs = GET('objects')
     get_obj = GET('objects/{0}')
     del_obj = DELETE('objects/{0}')

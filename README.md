@@ -1,13 +1,12 @@
-easy_rest documentation
-=======================
+prest documentation
+===================
 
 Writing python API for REST service is a quite boring task.
-easy_rest is intended to do all monkey work for you. Take
+prest is intended to do all monkey work for you. Take
 a look at example:
 
 ```python
-from easy_rest import EasyRestBase
-from easy_rest import GET, POST, DELETE
+from prest import EasyRestBase, GET, POST, DELETE
 
 
 class MyRestfullAPI(EasyRestBase):
@@ -41,25 +40,25 @@ So you need only one line to make an API func for
 each REST call.
 	
 In case if result of GET/... calls is assigned to
-class method of class inherited from EasyRestBase
+class method of class inherited from PRestBase
 then call gets connection from self. 
 
 Meanwhile you can use it separately:
 
 ```python
-from easy_rest import GET, Urllib2HTTP_JSON
+from prest import GET, Urllib2HTTP_JSON
 
 get_cluster_data = GET('data/{cluster_id}')
 conn = Urllib2HTTP_JSON("http://my_api.org")
 print get_cluster_data(conn, cluster_id=11)
 ```
 
-Both Urllib2HTTP_JSON and EasyRestBase
+Both Urllib2HTTP_JSON and PRestBase
 accepts dictionary of additional headers end echo
 parameters. Urllib2HTTP_JSON uses json.dumps and 
 json.loads to serialize and deserialize data accordingly.
 
 There also an object-oriented API - please take
-a look on test_easy_rest.py. I wrote no documentation 
+a look on test_prest.py. I wrote no documentation 
 for it, as it currently breaks 17th rule of python Zen.
 

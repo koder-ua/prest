@@ -18,7 +18,7 @@ def _E(x):
     return x
 
 
-logger = logging.getLogger('easy_rest')
+logger = logging.getLogger('prest')
 
 
 class Urllib2HTTP(object):
@@ -111,7 +111,7 @@ DELETE = partial(http_call, 'delete')
 HEAD = partial(http_call, 'head')
 
 
-class EasyRestMeta(type):
+class PRestMeta(type):
     def __new__(cls, name, bases, dct):
         new_dct = dct.copy()
         for name, attr in dct.items():
@@ -120,11 +120,11 @@ class EasyRestMeta(type):
                 def closure(self, *args, **kwargs):
                     return attr(self.__connection__, *args, **kwargs)
                 new_dct[name] = closure
-        return super(EasyRestMeta, cls).__new__(cls, name, bases, new_dct)
+        return super(PRestMeta, cls).__new__(cls, name, bases, new_dct)
 
 
-class EasyRestBase(object):
-    __metaclass__ = EasyRestMeta
+class PRestBase(object):
+    __metaclass__ = PRestMeta
     __conn_class__ = Urllib2HTTP_JSON
 
     def __init__(self, base_url, headers=None, echo=False, ):

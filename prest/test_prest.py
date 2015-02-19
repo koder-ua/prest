@@ -2,8 +2,8 @@ import contextlib
 
 from oktest import ok
 
-from easy_rest import APIClass, GET, POST, PUT, PATCH, DELETE
-from easy_rest import ORMBase, attr, restfull_url_set, SAME, OrmHTTPMixIn
+from prest import APIClass, GET, POST, PUT, PATCH, DELETE
+from prest import ORMBase, attr, restfull_url_set, SAME, OrmHTTPMixIn
 
 
 class HTTPOK(object):
