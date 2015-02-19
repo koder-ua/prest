@@ -10,7 +10,6 @@ class MyRestfullAPI(EasyRestBase):
     select_objs = GET('objects/filter')
     objs_by_type = GET('objects/{type}')
 
-
 conn = MyRestfullAPI("http://some.api.com/my_api/v2.0")
 
 print conn.list_objs()

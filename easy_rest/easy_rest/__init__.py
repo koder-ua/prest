@@ -98,7 +98,7 @@ def http_call(method, url_templ):
         url = url_templ.format(*args, **kwargs)
         return func(url, data_args)
 
-    closure.__doc__ = ""
+    closure.__doc__ = "API call for {0!r} url".format(url_templ)
     closure.__need_connection__ = True
     return closure
 
@@ -111,16 +111,16 @@ DELETE = partial(http_call, 'delete')
 HEAD = partial(http_call, 'head')
 
 
-class EasyRestMeta(object):
+class EasyRestMeta(type):
     def __new__(cls, name, bases, dct):
         new_dct = dct.copy()
-        for name, obj in new_dct.items():
-            if getattr(obj, '__need_connection__', False):
-                @functools.wraps(obj)
+        for name, attr in dct.items():
+            if getattr(attr, '__need_connection__', False):
+                @functools.wraps(attr)
                 def closure(self, *args, **kwargs):
-                    return obj(self.__connection__, *args, **kwargs)
+                    return attr(self.__connection__, *args, **kwargs)
                 new_dct[name] = closure
-        return super(EasyRestMeta, cls).__new__(name, bases, new_dct)
+        return super(EasyRestMeta, cls).__new__(cls, name, bases, new_dct)
 
 
 class EasyRestBase(object):
