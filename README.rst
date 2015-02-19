@@ -1,11 +1,11 @@
 easy_rest documentation
 =======================
 
-	Writting python API for REST service is a quite boring task.
+Writting python API for REST service is a quite boring task.
 easy_rest is intended to do all monkeywork for you. Take
 a look at example:
 
-~~~~python
+```python
 from easy_rest import EasyRestBase
 from easy_rest import GET, POST, DELETE
 
@@ -27,10 +27,10 @@ obj_id = conn.create_obj()['id']
 conn.select_objs(color='read')
 conn.del_obj(obj_id)
 conn.objs_by_type(type='red')
-~~~~
+```
 
 
-	There 6 basic functions for http methods:
+There 6 basic functions for http methods:
 GET, POST, PUT, PATCH, DELETE, HEAD. Each of them
 requires relative path and returns function. This 
 function, in its turn, gets connection and a set of 
@@ -38,29 +38,29 @@ parameters, insert some of them in url (if there a placeholders),
 attach all the rest as GET/POST params and make 
 http request. Receive result, unpack it and return.
 
-	So you need only one line to make an API func for 
+So you need only one line to make an API func for 
 each REST call.
 	
-	In case if result of GET/... calls is assigned to
+In case if result of GET/... calls is assigned to
 class method of class inherited from EasyRestBase
 then call gets connection from self. 
 
-	Meanwhile you can use it separatelly:
+Meanwhile you can use it separatelly:
 
-~~~~python
+```python
 from easy_rest import GET, Urllib2HTTP_JSON
 
 get_cluster_data = GET('data/{cluster_id}')
 conn = Urllib2HTTP_JSON("http://my_api.org")
 print get_cluster_data(conn, cluster_id=11)
-~~~~
+```
 
-	Both Urllib2HTTP_JSON and EasyRestBase
+Both Urllib2HTTP_JSON and EasyRestBase
 accepts dictionary of additional headers end echo
 parameters. Urllib2HTTP_JSON uses json.dumps and 
 json.loads to serialize and deserialize data.
 
-	There also a object-oriented api, please take
+There also a object-oriented api, please take
 a look on test_easy_rest.py. There no docs, as it
 breaks 17th rule of python Zen.
 
