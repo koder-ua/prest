@@ -20,9 +20,9 @@ def read_file(file_name):
     return open(file_path).read()
 
 setup(name=PROJECT,
-      version='0.1',
+      version=VERSION,
       description=DESC,
-      url='https://github.com/koder-ua/prest',
+      url=URL,
       author=AUTHOR,
       author_email=AUTHOR_EMAIL,
       license='LGPL',
