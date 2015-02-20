@@ -27,8 +27,6 @@ class Urllib2HTTP(object):
     """
 
     allowed_methods = ('get', 'put', 'post', 'delete', 'patch', 'head')
-    unpacker = _E
-    packer = _E
 
     def __init__(self, root_url, headers=None, echo=False):
         """
@@ -36,9 +34,11 @@ class Urllib2HTTP(object):
         self.root_url = root_url
         self.headers = headers if headers is not None else {}
         self.echo = echo
+        self.unpacker = _E
+        self.packer = _E
 
     def do(self, method, path, params=None):
-        url = self.root_url + '/' + path
+        url = self.root_url.rstrip('/') + '/' + path.lstrip('/')
 
         if method == 'get':
             assert params == {} or params is None
@@ -75,8 +75,10 @@ class Urllib2HTTP(object):
 
 
 class Urllib2HTTP_JSON(Urllib2HTTP):
-    unpacker = json.loads
-    packer = json.dumps
+    def __init__(self, *args, **kwargs):
+        super(Urllib2HTTP_JSON, self).__init__(*args, **kwargs)
+        self.unpacker = json.loads
+        self.packer = json.dumps
 
 
 format_param_rr = re.compile(r"\{([a-zA-Z_]+)\}")
@@ -93,6 +95,13 @@ def http_call(method, url_templ):
 
     def closure(connection, *args, **kwargs):
         func = getattr(connection, method)
+        inner_obj = kwargs.pop('__inner_obj', None)
+
+        if inner_obj is not None:
+            for name in formatted_names:
+                if name not in kwargs:
+                    kwargs[name] = getattr(inner_obj, name)
+
         data_args = {name: val for name, val in kwargs.items()
                      if name not in formatted_names}
         url = url_templ.format(*args, **kwargs)
@@ -111,24 +120,29 @@ DELETE = partial(http_call, 'delete')
 HEAD = partial(http_call, 'head')
 
 
+def get_func_clusure(attr):
+    @functools.wraps(attr)
+    def closure(self, *args, **kwargs):
+        kwargs['__inner_obj'] = self
+        return attr(self.__connection__, *args, **kwargs)
+    return closure
+
+
 class PRestMeta(type):
     def __new__(cls, name, bases, dct):
         new_dct = dct.copy()
         for name, attr in dct.items():
             if getattr(attr, '__need_connection__', False):
-                @functools.wraps(attr)
-                def closure(self, *args, **kwargs):
-                    return attr(self.__connection__, *args, **kwargs)
-                new_dct[name] = closure
+                new_dct[name] = get_func_clusure(attr)
         return super(PRestMeta, cls).__new__(cls, name, bases, new_dct)
 
 
 class PRestBase(object):
     __metaclass__ = PRestMeta
-    __conn_class__ = Urllib2HTTP_JSON
 
-    def __init__(self, base_url, headers=None, echo=False, ):
-        self.__connection__ = self.__conn_class__(base_url, headers, echo)
+    def __init__(self, conn, **attrs):
+        self.__connection__ = conn
+        self.__dict__.update(attrs)
 
 
 # ---------------- ALL THE HACKY CODE GOES BELOW -----------------------------
