@@ -4,7 +4,7 @@ from setuptools import setup
 
 
 PROJECT = 'prest'
-VERSION = '0.2'
+VERSION = '0.2.3'
 URL = 'https://github.com/koder-ua/prest'
 AUTHOR = 'K.Danilov aka koder'
 AUTHOR_EMAIL = 'koder.mail@gmail.com'
@@ -27,4 +27,5 @@ setup(name=PROJECT,
       author_email=AUTHOR_EMAIL,
       license='LGPL',
       packages=[PROJECT],
-      zip_safe=False)
+      zip_safe=False,
+      long_description=read_file("README.rst"))

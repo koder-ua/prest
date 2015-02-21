@@ -94,6 +94,7 @@ def http_call(method, url_templ):
         formatted_names.add(match.group(1))
 
     def closure(connection, *args, **kwargs):
+
         func = getattr(connection, method)
         inner_obj = kwargs.pop('__inner_obj', None)
 
@@ -102,9 +103,14 @@ def http_call(method, url_templ):
                 if name not in kwargs:
                     kwargs[name] = getattr(inner_obj, name)
 
-        data_args = {name: val for name, val in kwargs.items()
-                     if name not in formatted_names}
-        url = url_templ.format(*args, **kwargs)
+        url = url_templ.format(**kwargs)
+
+        if len(args) == 1:
+            data_args = args[0]
+        else:
+            data_args = {name: val for name, val in kwargs.items()
+                         if name not in formatted_names}
+
         return func(url, data_args)
 
     closure.__doc__ = "API call for {0!r} url".format(url_templ)
