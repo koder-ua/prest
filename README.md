@@ -1,9 +1,9 @@
 prest documentation
 ===================
 
-Writing python API for REST service is a quite boring task.
-prest is intended to do all monkey work for you. Take
-a look at example:
+Writing a Python API for a REST service is quite a boring task.
+prest is intended to do all of the monkey work for you. Take
+a look at an example:
 
 ```python
 from prest import EasyRestBase, GET, POST, DELETE
@@ -28,13 +28,21 @@ conn.del_obj(obj_id)
 conn.objs_by_type(type='red')
 ```
 
-There 6 basic functions for http methods:
-GET, POST, PUT, PATCH, DELETE, HEAD. Each of them
-requires relative path and returns function. This 
-function, in its turn, gets connection and a set of 
-parameters, insert some of them in url (if there a placeholders), 
-attach all the rest as GET/POST parameters and make 
-a http request. Receive a result, unpack it and return.
+There are 6 basic functions for HTTP methods:
+
+- GET
+- POST
+- PUT
+- PATCH
+- DELETE
+- HEAD
+
+Each of them
+requires a relative path and returns a function. This 
+function, in turn, gets a connection and a set of 
+parameters, inserts some of them in the url (if there are placeholders), 
+attaches all the rest as GET/POST parameters, and makes 
+an HTTP request. The function receives the result, unpacks it and returns the result to the caller.
 
 So you need only one line to make an API func for 
 each REST call.
