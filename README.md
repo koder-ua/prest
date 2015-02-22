@@ -66,10 +66,6 @@ accepts dictionary of additional headers end echo
 parameters. Urllib2HTTP_JSON uses json.dumps and 
 json.loads to serialize and deserialize data accordingly.
 
-There also an object-oriented API - please take
-a look on test_prest.py. I wrote no documentation 
-for it, as it currently breaks 17th rule of python Zen.
-
 Parameter dispatching rules::
 
 ```python
@@ -98,4 +94,6 @@ func(positional_param, **names_params)
   In case if extra named parameters provided - ValueError
   would be raised.
 
-
+There also an object-oriented API - please take
+a look on test_orm.py. I wrote no documentation 
+for it, as it currently breaks 17th rule of python Zen.
