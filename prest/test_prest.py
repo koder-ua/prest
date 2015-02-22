@@ -2,6 +2,7 @@ import contextlib
 
 from oktest import ok
 
+from prest import PRestBase
 from prest import APIClass, GET, POST, PUT, PATCH, DELETE
 from prest import ORMBase, attr, restfull_url_set, SAME, OrmHTTPMixIn
 
@@ -56,27 +57,6 @@ class HTTPMock(OrmHTTPMixIn):
         return HTTPOK(self)
 
 
-def test_api_class():
-    hm = HTTPMock()
-    hok = hm.ok_http
-
-    class API(APIClass):
-        get_docs = GET('docs')
-        create_doc = POST('docs')
-        update_doc = PUT('docs/{id}')
-        delete_doc = DELETE('docs/{id}')
-        patch_doc = PATCH('docs/{id}')
-
-    a = API(hm)
-    hok(a.get_docs()) == ('get', 'docs', {})
-
-    hm.responce = {'id': 12}
-    hok(a.create_doc(x=2)) == ('post', 'docs', {'x': 2})
-    hok(a.update_doc(id=12, x=2)) == ('put', 'docs/12', {'x': 2})
-    hok(a.delete_doc(id=3, x=2)) == ('delete', 'docs/3', {'x': 2})
-    hok(a.patch_doc(id=12, x=2)) == ('patch', 'docs/12', {'x': 2})
-
-
 @contextlib.contextmanager
 def raises(exc_class):
     try:
@@ -84,11 +64,97 @@ def raises(exc_class):
     except exc_class:
         pass
     except Exception as x:
-        templ = "{} exception get, while instance of {} expected"
+        templ = "{0} exception get, while instance of {1} expected"
         raise AssertionError(templ.format(x, exc_class))
     else:
-        templ = "No exception raised, while instance of {} expected"
+        templ = "No exception raised, while instance of {0} expected"
         raise AssertionError(templ.format(exc_class))
+
+
+class BasicTests(object):
+    def test_positional_param_in_urls(self):
+        with raises(ValueError):
+            GET("x/{0}")
+
+    def test_missing_param(self):
+        conn = HTTPMock()
+
+        func = GET("x/{test}")
+        with raises(ValueError):
+            func(conn)
+
+    def test_extra_param_with_whole_doc(self):
+        conn = HTTPMock()
+
+        func = GET("x/{test}")
+        with raises(ValueError):
+            func(conn, {}, test=12, extra=14)
+
+    def test_missing_param_with_obj(self):
+        conn = HTTPMock()
+
+        class TestAPI(PRestBase):
+            func = GET("x/{test}")
+
+        api = TestAPI(conn)
+
+        with raises(ValueError):
+            api.func()
+
+    def test_get_param_from_obj(self):
+        conn = HTTPMock()
+        hok = conn.ok_http
+
+        class TestAPI(PRestBase):
+            func = GET("x/{test}")
+
+        api = TestAPI(conn)
+        api.test = 12
+
+        hok(api.func()) == ('get', 'x/12', {})
+
+    def test_pack_extra_params(self):
+        conn = HTTPMock()
+        hok = conn.ok_http
+
+        class TestAPI(PRestBase):
+            func = GET("x/{test}")
+
+        api = TestAPI(conn)
+        api.test = 12
+
+        hok(api.func(a='23')) == ('get', 'x/12', {'a': '23'})
+
+    def test_whole_doc(self):
+        conn = HTTPMock()
+        hok = conn.ok_http
+
+        class TestAPI(PRestBase):
+            func = GET("x/{test}")
+
+        api = TestAPI(conn)
+
+        hok(api.func({'m': 'k'}, test='23')) == ('get', 'x/23', {'m': 'k'})
+
+    def test_api_class(self):
+        hm = HTTPMock()
+        hok = hm.ok_http
+
+        class API(PRestBase):
+            get_docs = GET('docs')
+            create_doc = POST('docs')
+            update_doc = PUT('docs/{id}')
+            delete_doc = DELETE('docs/{id}')
+            patch_doc = PATCH('docs/{id}')
+
+        a = API(hm)
+        hok(a.get_docs()) == ('get', 'docs', {})
+
+        hm.responce = {'id': 12}
+        hok(a.create_doc(x=2)) == ('post', 'docs', {'x': 2})
+        hok(a.update_doc(id=12, x=2)) == ('put', 'docs/12', {'x': 2})
+        hok(a.delete_doc(id=3, x=2)) == ('delete', 'docs/3', {'x': 2})
+        hok(a.patch_doc(id=12, x=2)) == ('patch', 'docs/12', {'x': 2})
 
 
 class Msg(ORMBase):
@@ -101,143 +167,134 @@ def make_http():
     return http
 
 
-def test_orm_create():
-    http = make_http()
+class TestORG(object):
+    def test_orm_create(self):
+        http = make_http()
 
-    m = Msg.make(http, field='xxx')
-    m.save()
+        m = Msg.make(http, field='xxx')
+        m.save()
 
-    ok(http.popleft()) == ('post', 'api', {'field': 'xxx'})
-    ok(m.id) == 12
-    ok(m.field) == 'xxx'
+        ok(http.popleft()) == ('post', 'api', {'field': 'xxx'})
+        ok(m.id) == 12
+        ok(m.field) == 'xxx'
 
-    with raises(IndexError):
-        http.popleft()
+        with raises(IndexError):
+            http.popleft()
 
+    def test_orm_load(self):
+        http = make_http()
 
-def test_orm_load():
-    http = make_http()
+        m = http.load(Msg, 12)
+        ok(http.popleft()) == ('get', 'api/12', None)
+        ok(m.id) == 12
+        ok(m.field1) == 'xxx'
+        ok(m.field2) == 'yyy'
 
-    m = http.load(Msg, 12)
-    ok(http.popleft()) == ('get', 'api/12', None)
-    ok(m.id) == 12
-    ok(m.field1) == 'xxx'
-    ok(m.field2) == 'yyy'
+        with raises(IndexError):
+            http.popleft()
 
-    with raises(IndexError):
-        http.popleft()
+    def test_orm_update(self):
+        http = make_http()
 
+        m = http.load(Msg, 12)
+        ok(http.popleft()) == ('get', 'api/12', None)
 
-def test_orm_update():
-    http = make_http()
+        m.field1 = 'fff'
+        m.save()
+        ok(http.popleft()) == ('patch', 'api/12', {'field1': 'fff'})
+        with raises(IndexError):
+            http.popleft()
 
-    m = http.load(Msg, 12)
-    ok(http.popleft()) == ('get', 'api/12', None)
+    def test_orm_add_field(self):
+        http = make_http()
 
-    m.field1 = 'fff'
-    m.save()
-    ok(http.popleft()) == ('patch', 'api/12', {'field1': 'fff'})
-    with raises(IndexError):
-        http.popleft()
+        m = http.load(Msg, 12)
+        ok(http.popleft()) == ('get', 'api/12', None)
 
+        m.field3 = 'fff'
+        m.save()
+        ok(http.popleft()) == ('patch', 'api/12', {'field3': 'fff'})
+        with raises(IndexError):
+            http.popleft()
 
-def test_orm_add_field():
-    http = make_http()
+    def test_orm_rm_field(self):
+        http = make_http()
 
-    m = http.load(Msg, 12)
-    ok(http.popleft()) == ('get', 'api/12', None)
+        m = http.load(Msg, 12)
+        ok(http.popleft()) == ('get', 'api/12', None)
 
-    m.field3 = 'fff'
-    m.save()
-    ok(http.popleft()) == ('patch', 'api/12', {'field3': 'fff'})
-    with raises(IndexError):
-        http.popleft()
+        ok(m.field1) == 'xxx'
+        del m.field1
 
+        m.save()
+        ok(http.popleft()) == ('put', 'api/12', {'field2': 'yyy'})
+        with raises(IndexError):
+            http.popleft()
 
-def test_orm_rm_field():
-    http = make_http()
+    def test_orm_attrs(self):
+        http = make_http()
 
-    m = http.load(Msg, 12)
-    ok(http.popleft()) == ('get', 'api/12', None)
+        class Msg(ORMBase):
+            __urls__ = restfull_url_set('api')
+            ro_data = attr('api/{id}/ro_attr')
+            rw_data = attr('api/{id}/rw_attr', SAME)
 
-    ok(m.field1) == 'xxx'
-    del m.field1
+        http.responce = {'id': 12, 'field': 'xxx'}
+        m = http.load(Msg, 1)
+        ok(http.popleft()) == ('get', 'api/1', None)
+        ok(m.id) == 12
+        ok(m.field) == 'xxx'
+        ok(m.ro_data.id) == 12
+        ok(m.ro_data.field) == 'xxx'
+        ok(http.popleft()) == ('get', 'api/12/ro_attr', None)
+        m.rw_data['field'] = 18
+        ok(http.popleft()) == ('get', 'api/12/rw_attr', None)
+        m.rw_data.save()
+        ok(http.popleft()) == ('put', 'api/12/rw_attr', {'field': 18})
 
-    m.save()
-    ok(http.popleft()) == ('put', 'api/12', {'field2': 'yyy'})
-    with raises(IndexError):
-        http.popleft()
+        m.rw_data['field'] = 19
+        m.save()
+        ok(http.popleft()) == ('put', 'api/12/rw_attr', {'field': 19})
 
+    def test_orm_attr_save(self):
+        http = make_http()
 
-def test_orm_attrs():
-    http = make_http()
+        class Msg(ORMBase):
+            __urls__ = restfull_url_set('api')
+            ro_data = attr('api/{id}/ro_attr')
+            rw_data = attr('api/{id}/rw_attr', SAME)
 
-    class Msg(ORMBase):
-        __urls__ = restfull_url_set('api')
-        ro_data = attr('api/{id}/ro_attr')
-        rw_data = attr('api/{id}/rw_attr', SAME)
+        http.responce = {'id': 12, 'field': 'xxx'}
+        m = http.load(Msg, 1)
 
-    http.responce = {'id': 12, 'field': 'xxx'}
-    m = http.load(Msg, 1)
-    ok(http.popleft()) == ('get', 'api/1', None)
-    ok(m.id) == 12
-    ok(m.field) == 'xxx'
-    ok(m.ro_data.id) == 12
-    ok(m.ro_data.field) == 'xxx'
-    ok(http.popleft()) == ('get', 'api/12/ro_attr', None)
-    m.rw_data['field'] = 18
-    ok(http.popleft()) == ('get', 'api/12/rw_attr', None)
-    m.rw_data.save()
-    ok(http.popleft()) == ('put', 'api/12/rw_attr', {'field': 18})
+        x = m.data
+        x.f = 12
+        x.test = 13
+        x.save()
+        ok(http.popleft()) == ('put', 'api/12/rw_attr', {'field': 19})
 
-    m.rw_data['field'] = 19
-    m.save()
-    ok(http.popleft()) == ('put', 'api/12/rw_attr', {'field': 19})
+    def test_diff_in_put(self):
+        http = make_http()
 
+        class Msg(ORMBase):
+            __urls__ = restfull_url_set('api')
+            ro_data = attr('api/{id}/ro_attr')
+            rw_data = attr('api/{id}/rw_attr', SAME)
 
-def test_orm_attr_save():
-    http = make_http()
+        http.responce = {'id': 12, 'field': 'xxx'}
+        m = http.load(Msg, 1)
 
-    class Msg(ORMBase):
-        __urls__ = restfull_url_set('api')
-        ro_data = attr('api/{id}/ro_attr')
-        rw_data = attr('api/{id}/rw_attr', SAME)
+        x = m.data
+        x.f = 12
+        x.test = 13
+        x.save()
+        ok(http.popleft()) == ('put', 'api/12/rw_attr', {'field': 19})
 
-    http.responce = {'id': 12, 'field': 'xxx'}
-    m = http.load(Msg, 1)
+    def test_diff_in_patch(self):
+        pass
 
-    x = m.data
-    x.f = 12
-    x.test = 13
-    x.save()
-    ok(http.popleft()) == ('put', 'api/12/rw_attr', {'field': 19})
+    def test_no_partial_updates(self):
+        pass
 
-
-def test_diff_in_put():
-    http = make_http()
-
-    class Msg(ORMBase):
-        __urls__ = restfull_url_set('api')
-        ro_data = attr('api/{id}/ro_attr')
-        rw_data = attr('api/{id}/rw_attr', SAME)
-
-    http.responce = {'id': 12, 'field': 'xxx'}
-    m = http.load(Msg, 1)
-
-    x = m.data
-    x.f = 12
-    x.test = 13
-    x.save()
-    ok(http.popleft()) == ('put', 'api/12/rw_attr', {'field': 19})
-
-
-def test_diff_in_patch():
-    pass
-
-
-def test_no_partial_updates():
-    pass
-
-
-def test_derived_class():
-    pass
+    def test_derived_class(self):
+        pass

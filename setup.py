@@ -4,7 +4,7 @@ from setuptools import setup
 
 
 PROJECT = 'prest'
-VERSION = '0.2.5'
+VERSION = '0.2.7'
 URL = 'https://github.com/koder-ua/prest'
 AUTHOR = 'K.Danilov aka koder'
 AUTHOR_EMAIL = 'koder.mail@gmail.com'

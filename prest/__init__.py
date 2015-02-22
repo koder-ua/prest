@@ -10,8 +10,10 @@ import functools
 from functools import partial
 
 
-__all__ = ('Engine', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD',
-           'APIClass', 'restfull_url_set', 'attr', 'SAME', 'ORMBase')
+__all__ = ('Urllib2HTTP', 'Urllib2HTTP_JSON',
+           'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD',
+           'PRestBase', 'APIClass', 'restfull_url_set',
+           'attr', 'SAME', 'ORMBase', 'Engine')
 
 
 def _E(x):
@@ -40,14 +42,15 @@ class Urllib2HTTP(object):
     def do(self, method, path, params=None):
         url = self.root_url.rstrip('/') + '/' + path.lstrip('/')
 
-        if method == 'get':
-            assert params == {} or params is None
-            data_json = None
-        else:
+        if params is not None:
             data_json = self.packer(params)
+        else:
+            data_json = None
 
         if self.echo:
-            logger.debug("{} {}".format(method.upper(), url))
+            data_len = 0 if data_json is None else len(data_json)
+            msg_templ = "{0} {1} data_len={2}"
+            logger.debug(msg_templ.format(method.upper(), url, data_len))
 
         request = urllib2.Request(url,
                                   data=data_json,
@@ -82,6 +85,7 @@ class Urllib2HTTP_JSON(Urllib2HTTP):
 
 
 format_param_rr = re.compile(r"\{([a-zA-Z_]+)\}")
+positional_params_rr = re.compile(r"\{\d+\}")
 
 
 def http_call(method, url_templ):
@@ -89,29 +93,55 @@ def http_call(method, url_templ):
     return closure, which would takes parameters and
     makes http calls with given url and method
     """
-    formatted_names = set()
+    inurl_params = set()
     for match in format_param_rr.finditer(url_templ):
-        formatted_names.add(match.group(1))
+        inurl_params.add(match.group(1))
+
+    if positional_params_rr.search(url_templ):
+        msg_templ = "Positional parametes aren't allowed in url - {0!r}"
+        raise ValueError(msg_templ.format(url_templ))
 
     def closure(connection, *args, **kwargs):
+        if len(args) > 1:
+            msg_templ = "No more then one positional" + \
+                        " argument might be provided. Got {0!r}"
+            raise ValueError(msg_templ.format(args))
+        elif len(args) == 1:
+            whole_doc = args[0]
+        else:
+            whole_doc = None
 
         func = getattr(connection, method)
         inner_obj = kwargs.pop('__inner_obj', None)
 
+        kw_param_names = set(kwargs)
+        missing_param_names = inurl_params.difference(kw_param_names)
+        data_param_names = kw_param_names.difference(inurl_params)
+
         if inner_obj is not None:
-            for name in formatted_names:
-                if name not in kwargs:
+            # should make a temporary list
+            # as missing_param_names changed during iterations
+            for name in list(missing_param_names):
+                try:
                     kwargs[name] = getattr(inner_obj, name)
+                except AttributeError:
+                    pass
+                else:
+                    missing_param_names.remove(name)
+
+        if len(missing_param_names) != 0:
+            msg_templ = "Can't found value for parameter(s) {0}"
+            raise ValueError(msg_templ.format(",".join(missing_param_names)))
 
         url = url_templ.format(**kwargs)
 
-        if len(args) == 1:
-            data_args = args[0]
-        else:
-            data_args = {name: val for name, val in kwargs.items()
-                         if name not in formatted_names}
+        if whole_doc is None:
+            whole_doc = {name: kwargs[name] for name in data_param_names}
+        elif len(data_param_names) != 0:
+            msg_templ = "Extra params {0} passed along with entire doc"
+            raise ValueError(msg_templ.format(",".join(data_param_names)))
 
-        return func(url, data_args)
+        return func(url, whole_doc)
 
     closure.__doc__ = "API call for {0!r} url".format(url_templ)
     closure.__need_connection__ = True
@@ -446,7 +476,7 @@ def make_attr(raw_value, urls, parent, use_patch, partial_updates):
         return InnerAttr(parent, raw_value)
 
     tname = type(raw_value).__name__
-    raise ValueError("Don't know how to wrap value of type {}".format(tname))
+    raise ValueError("Don't know how to wrap value of type {0}".format(tname))
 
 
 class RestAttr(object):

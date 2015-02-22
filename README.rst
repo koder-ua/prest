@@ -68,3 +68,30 @@ There also an object-oriented API - please take
 a look on test_prest.py. I wrote no documentation 
 for it, as it currently breaks 17th rule of python Zen.
 
+Parameter dispatching rules::
+
+	func = GET('a/b/{c}/{d}?m={m}')
+	func(positional_param, **names_params)
+
+* All named parameters, which match placeholders in url
+  would be formatted into url.
+
+* From named parameters, which doesn't match placeholders,
+  would be created dictionary, which would be passed as request
+  body.
+
+* If not all url placeholder values are provided as named
+  parameters all the rest values would be taken from self,
+  if api function is inside class.
+
+* If some placeholder cannot be found neither in parameters
+  not in self (or no self is provided - in case of standalone
+  function). ValueError would be raised.
+
+* At most one positional parameter is allowed. If positional 
+  parameter is provided it would be used as entire request body.
+  All named parameters in this case should be formatted into url.
+  In case if extra named parameters provided - ValueError
+  would be raised.
+
+
